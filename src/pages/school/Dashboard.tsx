@@ -5,39 +5,108 @@ import {
   PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
 } from 'recharts'
 import StatsCard from '@/components/StatsCard'
-
-const majorData = [
-  { major: '计算机科学与技术', count: 45 },
-  { major: '软件工程', count: 38 },
-  { major: '金融学', count: 22 },
-  { major: '市场营销', count: 18 },
-  { major: '人工智能', count: 15 },
-  { major: '通信工程', count: 12 },
-  { major: '法学', count: 8 },
-]
-
-const monthlyData = [
-  { month: '9月', rate: 65 },
-  { month: '10月', rate: 72 },
-  { month: '11月', rate: 68 },
-  { month: '12月', rate: 78 },
-]
-
-const companyData = [
-  { company: '远景科技', rate: 75 },
-  { company: '金未来金融', rate: 60 },
-  { company: '数智科技', rate: 82 },
-]
-
-const satisfactionData = [
-  { dimension: '薪资福利', score: 4.2 },
-  { dimension: '工作内容', score: 4.5 },
-  { dimension: '带教质量', score: 3.8 },
-  { dimension: '工作环境', score: 4.1 },
-  { dimension: '发展前景', score: 3.9 },
-]
+import { useApplicationStore } from '@/stores/useApplicationStore'
+import { useAgreementStore } from '@/stores/useAgreementStore'
+import { useEvaluationStore } from '@/stores/useEvaluationStore'
+import { usePositionStore } from '@/stores/usePositionStore'
+import { useReviewStore } from '@/stores/useReviewStore'
+import { useCertificateStore } from '@/stores/useCertificateStore'
+import { mockUsers } from '@/data/mockData'
+import type { Evaluation } from '@/types'
 
 export default function Dashboard() {
+  const applications = useApplicationStore((s) => s.applications)
+  const agreements = useAgreementStore((s) => s.agreements)
+  const evaluations = useEvaluationStore((s) => s.evaluations)
+  const positions = usePositionStore((s) => s.positions)
+  const reviews = useReviewStore((s) => s.reviews)
+  const certificates = useCertificateStore((s) => s.certificates)
+
+  const totalStudents = mockUsers.filter((u) => u.role === 'student').length
+  const approvedCompanies = reviews.filter((r) => r.status === 'approved').length
+  const activeInternships = agreements.filter((a) => a.status === 'completed').length
+  const completionRate = agreements.length === 0 ? 0 : Math.round((certificates.length / agreements.length) * 100)
+
+  const acceptedApps = applications.filter((a) => a.status === 'accepted' || a.status === 'offered')
+  const majorMap = new Map<string, number>()
+  acceptedApps.forEach((a) => {
+    const m = a.studentMajor || '其他'
+    majorMap.set(m, (majorMap.get(m) || 0) + 1)
+  })
+  const majorData = Array.from(majorMap.entries()).map(([major, count]) => ({ major, count }))
+  if (majorData.length === 0) {
+    majorData.push({ major: '暂无数据', count: 0 })
+  }
+
+  const monthlyMap = new Map<string, { total: number; hired: number }>()
+  applications.forEach((a) => {
+    const dateStr = a.createdAt || a.updatedAt
+    const match = dateStr.match(/^(\d{4})-(\d{2})/)
+    if (!match) return
+    const monthKey = `${parseInt(match[2], 10)}月`
+    if (!monthlyMap.has(monthKey)) {
+      monthlyMap.set(monthKey, { total: 0, hired: 0 })
+    }
+    const entry = monthlyMap.get(monthKey)!
+    entry.total++
+    if (a.status === 'accepted' || a.status === 'offered') {
+      entry.hired++
+    }
+  })
+  let monthlyData = Array.from(monthlyMap.entries())
+    .map(([month, v]) => ({ month, rate: Math.round((v.hired / (v.total || 1)) * 100) }))
+  if (monthlyData.length < 3) {
+    const fallbackMonths = ['11月', '12月', '1月', '2月', '3月', '4月']
+    const existing = new Set(monthlyData.map((d) => d.month))
+    fallbackMonths.forEach((m) => {
+      if (!existing.has(m)) {
+        monthlyData.push({ month: m, rate: 0 })
+      }
+    })
+    monthlyData = monthlyData.slice(0, 6)
+  }
+
+  const posCompanyMap = new Map(positions.map((p) => [p.id, p.companyName]))
+  const byCompany = new Map<string, { total: number; hired: number }>()
+  applications.forEach((a) => {
+    const c = posCompanyMap.get(a.positionId) || a.companyName || '未知企业'
+    if (!byCompany.has(c)) {
+      byCompany.set(c, { total: 0, hired: 0 })
+    }
+    const s = byCompany.get(c)!
+    s.total++
+    if (a.status === 'accepted' || a.status === 'offered') {
+      s.hired++
+    }
+  })
+  const companyData = Array.from(byCompany.entries())
+    .map(([company, v]) => ({ company, rate: Math.round((v.hired / (v.total || 1)) * 100) }))
+  if (companyData.length === 0) {
+    companyData.push({ company: '暂无数据', rate: 0 })
+  }
+
+  const n = evaluations.length || 1
+  const avg = (key: keyof Evaluation) =>
+    Math.round((evaluations.reduce((s, e) => s + ((e[key] as number) || 0), 0) / n) * 10) / 10
+  const avgOverall =
+    Math.round((evaluations.reduce((s, e) => s + (e.overallScore || 0), 0) / n) * 10) / 10
+  const satisfactionData =
+    evaluations.length === 0
+      ? [
+          { dimension: '工作态度', score: 4.0 },
+          { dimension: '专业能力', score: 4.0 },
+          { dimension: '团队协作', score: 4.0 },
+          { dimension: '主动性', score: 4.0 },
+          { dimension: '综合评分', score: 4.0 },
+        ]
+      : [
+          { dimension: '工作态度', score: avg('workAttitude') },
+          { dimension: '专业能力', score: avg('professionalSkill') },
+          { dimension: '团队协作', score: avg('teamwork') },
+          { dimension: '主动性', score: avg('initiative') },
+          { dimension: '综合评分', score: avgOverall },
+        ]
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Noto Serif SC, serif' }}>
@@ -45,10 +114,10 @@ export default function Dashboard() {
       </h1>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard label="学生总数" value={1286} icon={<Users className="h-5 w-5" />} trend="+5.2%" />
-        <StatsCard label="合作企业" value={48} icon={<Building2 className="h-5 w-5" />} trend="+3" />
-        <StatsCard label="在岗实习" value={324} icon={<Briefcase className="h-5 w-5" />} trend="+12%" />
-        <StatsCard label="完成率" value="87%" icon={<TrendingUp className="h-5 w-5" />} trend="+2.1%" />
+        <StatsCard label="学生总数" value={totalStudents} icon={<Users className="h-5 w-5" />} trend="+0" />
+        <StatsCard label="合作企业" value={approvedCompanies} icon={<Building2 className="h-5 w-5" />} trend="+0" />
+        <StatsCard label="在岗实习" value={activeInternships} icon={<Briefcase className="h-5 w-5" />} trend="+0" />
+        <StatsCard label="完成率" value={`${completionRate}%`} icon={<TrendingUp className="h-5 w-5" />} trend="+0" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -74,7 +143,14 @@ export default function Dashboard() {
               <YAxis tick={{ fontSize: 12 }} unit="%" />
               <Tooltip formatter={(v: number) => `${v}%`} />
               <Legend />
-              <Line type="monotone" dataKey="rate" stroke="#0f766e" strokeWidth={2} dot={{ r: 4, fill: '#0f766e' }} name="录用率" />
+              <Line
+                type="monotone"
+                dataKey="rate"
+                stroke="#0f766e"
+                strokeWidth={2}
+                dot={{ r: 4, fill: '#0f766e' }}
+                name="录用率"
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>

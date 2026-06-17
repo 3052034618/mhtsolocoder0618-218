@@ -255,7 +255,7 @@ export default function Home() {
                           getLogoColor(pos.companyName)
                         )}
                       >
-                        {pos.companyLogo}
+                        {pos.companyLogo || pos.companyName[0]}
                       </div>
                       <div className="min-w-0">
                         <h3 className="truncate font-semibold text-slate-900 group-hover:text-teal-700">

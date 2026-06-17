@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { Interview, InterviewStatus } from '@/types'
 import { mockInterviews } from '@/data/mockData'
 
@@ -14,34 +15,39 @@ interface InterviewState {
   getInterviewsByApplication: (applicationId: string) => Interview[]
 }
 
-export const useInterviewStore = create<InterviewState>((set, get) => ({
-  interviews: mockInterviews,
-  addInterview: (interview) => {
-    const newInterview: Interview = {
-      ...interview,
-      id: `int-${Date.now()}`,
-    }
-    set((state) => ({ interviews: [...state.interviews, newInterview] }))
-  },
-  updateInterview: (id, data) => {
-    set((state) => ({
-      interviews: state.interviews.map((i) =>
-        i.id === id ? { ...i, ...data } : i
-      ),
-    }))
-  },
-  updateInterviewStatus: (id, status) => {
-    set((state) => ({
-      interviews: state.interviews.map((i) =>
-        i.id === id ? { ...i, status } : i
-      ),
-    }))
-  },
-  deleteInterview: (id) => {
-    set((state) => ({ interviews: state.interviews.filter((i) => i.id !== id) }))
-  },
-  getInterviewById: (id) => get().interviews.find((i) => i.id === id),
-  getInterviewsByStudent: (studentId) => get().interviews.filter((i) => i.studentId === studentId),
-  getInterviewsByPosition: (positionId) => get().interviews.filter((i) => i.positionId === positionId),
-  getInterviewsByApplication: (applicationId) => get().interviews.filter((i) => i.applicationId === applicationId),
-}))
+export const useInterviewStore = create<InterviewState>()(
+  persist(
+    (set, get) => ({
+      interviews: mockInterviews,
+      addInterview: (interview) => {
+        const newInterview: Interview = {
+          ...interview,
+          id: `int-${Date.now()}`,
+        }
+        set((state) => ({ interviews: [...state.interviews, newInterview] }))
+      },
+      updateInterview: (id, data) => {
+        set((state) => ({
+          interviews: state.interviews.map((i) =>
+            i.id === id ? { ...i, ...data } : i
+          ),
+        }))
+      },
+      updateInterviewStatus: (id, status) => {
+        set((state) => ({
+          interviews: state.interviews.map((i) =>
+            i.id === id ? { ...i, status } : i
+          ),
+        }))
+      },
+      deleteInterview: (id) => {
+        set((state) => ({ interviews: state.interviews.filter((i) => i.id !== id) }))
+      },
+      getInterviewById: (id) => get().interviews.find((i) => i.id === id),
+      getInterviewsByStudent: (studentId) => get().interviews.filter((i) => i.studentId === studentId),
+      getInterviewsByPosition: (positionId) => get().interviews.filter((i) => i.positionId === positionId),
+      getInterviewsByApplication: (applicationId) => get().interviews.filter((i) => i.applicationId === applicationId),
+    }),
+    { name: 'interview-store' }
+  )
+)

@@ -32,6 +32,10 @@ export interface Position {
   status: PositionStatus
   createdAt: string
   updatedAt: string
+  reviewerId?: string
+  reviewerName?: string
+  reviewComment?: string
+  reviewedAt?: string
 }
 
 export type ApplicationStatus = 'pending' | 'screened' | 'interview' | 'rejected' | 'offered' | 'accepted'

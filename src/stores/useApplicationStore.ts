@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { Application, ApplicationStatus } from '@/types'
 import { mockApplications } from '@/data/mockData'
 
@@ -11,26 +12,31 @@ interface ApplicationState {
   getApplicationsByCompany: (positionIds: string[]) => Application[]
 }
 
-export const useApplicationStore = create<ApplicationState>((set, get) => ({
-  applications: mockApplications,
-  addApplication: (application) => {
-    const newApp: Application = {
-      ...application,
-      id: `app-${Date.now()}`,
-      status: 'pending',
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0],
-    }
-    set((state) => ({ applications: [...state.applications, newApp] }))
-  },
-  updateApplicationStatus: (id, status) => {
-    set((state) => ({
-      applications: state.applications.map((a) =>
-        a.id === id ? { ...a, status, updatedAt: new Date().toISOString().split('T')[0] } : a
-      ),
-    }))
-  },
-  getApplicationsByPosition: (positionId) => get().applications.filter((a) => a.positionId === positionId),
-  getApplicationsByStudent: (studentId) => get().applications.filter((a) => a.studentId === studentId),
-  getApplicationsByCompany: (positionIds: string[]) => get().applications.filter((a) => positionIds.includes(a.positionId)),
-}))
+export const useApplicationStore = create<ApplicationState>()(
+  persist(
+    (set, get) => ({
+      applications: mockApplications,
+      addApplication: (application) => {
+        const newApp: Application = {
+          ...application,
+          id: `app-${Date.now()}`,
+          status: 'pending',
+          createdAt: new Date().toISOString().split('T')[0],
+          updatedAt: new Date().toISOString().split('T')[0],
+        }
+        set((state) => ({ applications: [...state.applications, newApp] }))
+      },
+      updateApplicationStatus: (id, status) => {
+        set((state) => ({
+          applications: state.applications.map((a) =>
+            a.id === id ? { ...a, status, updatedAt: new Date().toISOString().split('T')[0] } : a
+          ),
+        }))
+      },
+      getApplicationsByPosition: (positionId) => get().applications.filter((a) => a.positionId === positionId),
+      getApplicationsByStudent: (studentId) => get().applications.filter((a) => a.studentId === studentId),
+      getApplicationsByCompany: (positionIds) => get().applications.filter((a) => positionIds.includes(a.positionId)),
+    }),
+    { name: 'application-store' }
+  )
+)

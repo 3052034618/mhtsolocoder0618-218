@@ -38,7 +38,7 @@ export default function ManagePositions() {
         <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Noto Serif SC, serif' }}>
           职位管理
         </h1>
-        <button onClick={() => navigate('/company/post-position')}
+        <button onClick={() => navigate('/company/post')}
           className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 transition-colors">
           <Briefcase className="h-4 w-4" /> 发布职位
         </button>
@@ -81,12 +81,17 @@ export default function ManagePositions() {
                   <td className="px-4 py-3 text-slate-600">{pos.city}</td>
                   <td className="px-4 py-3 text-slate-600" style={{ fontFamily: 'DM Sans, sans-serif' }}>{pos.salary}</td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={pos.status} label={POSITION_STATUSES[pos.status]} />
+                    <div className="flex flex-col gap-1">
+                      <StatusBadge status={pos.status} label={POSITION_STATUSES[pos.status]} />
+                      {pos.status === 'rejected' && pos.reviewComment && (
+                        <p className="text-xs text-red-500">驳回意见：{pos.reviewComment}</p>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-slate-500" style={{ fontFamily: 'DM Sans, sans-serif' }}>{pos.createdAt}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => navigate(`/company/post-position?id=${pos.id}`)}
+                      <button onClick={() => navigate(`/company/post?id=${pos.id}`)}
                         className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-teal-700 hover:bg-teal-50 transition-colors">
                         <Pencil className="h-3.5 w-3.5" /> 编辑
                       </button>

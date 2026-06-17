@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, UserCheck, X, CalendarPlus, FileText } from 'lucide-react'
+import { ChevronDown, ChevronUp, UserCheck, X, CalendarPlus, FileText, BadgeCheck } from 'lucide-react'
 import { usePositionStore } from '@/stores/usePositionStore'
 import { useApplicationStore } from '@/stores/useApplicationStore'
 import { useInterviewStore } from '@/stores/useInterviewStore'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { APPLICATION_STATUSES, type ApplicationStatus } from '@/types'
+import { useAgreementStore } from '@/stores/useAgreementStore'
+import { APPLICATION_STATUSES, type ApplicationStatus, type Application } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
 import Modal from '@/components/Modal'
 import Empty from '@/components/Empty'
@@ -16,6 +17,7 @@ const TABS: { key: ApplicationStatus | 'all'; label: string }[] = [
   { key: 'interview', label: '进入面试' },
   { key: 'rejected', label: '已拒绝' },
   { key: 'offered', label: '已录用' },
+  { key: 'accepted', label: '已入职' },
 ]
 
 export default function Applications() {
@@ -24,11 +26,49 @@ export default function Applications() {
   const getApplicationsByCompany = useApplicationStore((s) => s.getApplicationsByCompany)
   const updateApplicationStatus = useApplicationStore((s) => s.updateApplicationStatus)
   const addInterview = useInterviewStore((s) => s.addInterview)
+  const agreements = useAgreementStore((s) => s.agreements)
+  const addAgreement = useAgreementStore((s) => s.addAgreement)
 
   const companyId = user?.companyId ?? 'company-1'
   const positions = getPositionsByCompany(companyId)
   const positionIds = positions.map((p) => p.id)
   const applications = getApplicationsByCompany(positionIds)
+
+  const createAgreementIfNeeded = (app: Application) => {
+    const exists = agreements.some((a) => a.applicationId === app.id)
+    if (exists) return
+
+    const today = new Date()
+    const start = new Date(today)
+    start.setDate(today.getDate() + 7)
+    const end = new Date(start)
+    end.setMonth(start.getMonth() + 6)
+    const startDate = start.toISOString().split('T')[0]
+    const endDate = end.toISOString().split('T')[0]
+
+    addAgreement({
+      applicationId: app.id,
+      positionId: app.positionId,
+      positionTitle: app.positionTitle,
+      studentId: app.studentId,
+      studentName: app.studentName,
+      companyId: user?.companyId ?? 'company-1',
+      companyName: app.companyName,
+      schoolId: 'school-1',
+      schoolName: '华东理工大学',
+      startDate,
+      endDate,
+      studentSigned: false,
+      companySigned: false,
+      schoolSigned: false,
+      status: 'pending_student',
+    })
+  }
+
+  const handleAcceptToAccepted = (app: Application) => {
+    updateApplicationStatus(app.id, 'accepted')
+    createAgreementIfNeeded(app)
+  }
 
   const [tab, setTab] = useState<ApplicationStatus | 'all'>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -112,7 +152,7 @@ export default function Applications() {
                 {expanded && (
                   <div className="border-t border-slate-100 px-5 py-4">
                     <p className="mb-4 text-sm text-slate-600 leading-relaxed">{app.selfIntroduction}</p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {app.status === 'pending' && (
                         <>
                           <button onClick={() => updateApplicationStatus(app.id, 'interview')}
@@ -126,10 +166,28 @@ export default function Applications() {
                         </>
                       )}
                       {app.status === 'interview' && (
-                        <button onClick={() => handleInterview(app.id)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 transition-colors">
-                          <CalendarPlus className="h-4 w-4" /> 安排面试
-                        </button>
+                        <>
+                          <button onClick={() => handleInterview(app.id)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 transition-colors">
+                            <CalendarPlus className="h-4 w-4" /> 安排面试
+                          </button>
+                          <button onClick={() => updateApplicationStatus(app.id, 'offered')}
+                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors">
+                            <BadgeCheck className="h-4 w-4" /> 直接录用
+                          </button>
+                        </>
+                      )}
+                      {app.status === 'offered' && (
+                        <>
+                          <span className="text-sm text-slate-500">已发出录用，等待学生接受</span>
+                          <button onClick={() => handleAcceptToAccepted(app)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors">
+                            <BadgeCheck className="h-4 w-4" /> 确认入职（模拟学生已接受）
+                          </button>
+                        </>
+                      )}
+                      {app.status === 'accepted' && (
+                        <span className="text-sm text-emerald-600 font-medium">✓ 已入职，三方协议已生成</span>
                       )}
                     </div>
                   </div>

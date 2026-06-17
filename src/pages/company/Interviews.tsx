@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { Send, Calendar } from 'lucide-react'
+import { Send, Calendar, BadgeCheck } from 'lucide-react'
 import { usePositionStore } from '@/stores/usePositionStore'
 import { useInterviewStore } from '@/stores/useInterviewStore'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { INTERVIEW_STATUSES, type InterviewStatus } from '@/types'
+import { useApplicationStore } from '@/stores/useApplicationStore'
+import { useAgreementStore } from '@/stores/useAgreementStore'
+import { INTERVIEW_STATUSES, type InterviewStatus, type Interview } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
 import Empty from '@/components/Empty'
 import { cn } from '@/lib/utils'
@@ -21,6 +23,10 @@ export default function Interviews() {
   const getPositionsByCompany = usePositionStore((s) => s.getPositionsByCompany)
   const getInterviewsByPosition = useInterviewStore((s) => s.getInterviewsByPosition)
   const updateInterviewStatus = useInterviewStore((s) => s.updateInterviewStatus)
+  const getApplicationById = useApplicationStore((s) => (id: string) => s.applications.find((a) => a.id === id))
+  const updateApplicationStatus = useApplicationStore((s) => s.updateApplicationStatus)
+  const agreements = useAgreementStore((s) => s.agreements)
+  const addAgreement = useAgreementStore((s) => s.addAgreement)
 
   const companyId = user?.companyId ?? 'company-1'
   const positions = getPositionsByCompany(companyId)
@@ -31,6 +37,45 @@ export default function Interviews() {
 
   const handleSendNotification = (id: string) => {
     updateInterviewStatus(id, 'confirmed')
+  }
+
+  const createAgreementIfNeeded = (interview: Interview) => {
+    const exists = agreements.some((a) => a.applicationId === interview.applicationId)
+    if (exists) return
+
+    const app = getApplicationById(interview.applicationId)
+    if (!app) return
+
+    const today = new Date()
+    const start = new Date(today)
+    start.setDate(today.getDate() + 7)
+    const end = new Date(start)
+    end.setMonth(start.getMonth() + 6)
+    const startDate = start.toISOString().split('T')[0]
+    const endDate = end.toISOString().split('T')[0]
+
+    addAgreement({
+      applicationId: interview.applicationId,
+      positionId: interview.positionId,
+      positionTitle: interview.positionTitle,
+      studentId: interview.studentId,
+      studentName: interview.studentName,
+      companyId: user?.companyId ?? 'company-1',
+      companyName: interview.companyName,
+      schoolId: 'school-1',
+      schoolName: '华东理工大学',
+      startDate,
+      endDate,
+      studentSigned: false,
+      companySigned: false,
+      schoolSigned: false,
+      status: 'pending_student',
+    })
+  }
+
+  const handleMarkAsHired = (interview: Interview) => {
+    updateApplicationStatus(interview.applicationId, 'accepted')
+    createAgreementIfNeeded(interview)
   }
 
   return (
@@ -77,12 +122,20 @@ export default function Interviews() {
                     <StatusBadge status={interview.status} label={INTERVIEW_STATUSES[interview.status]} />
                   </td>
                   <td className="px-4 py-3">
-                    {interview.status === 'pending' && (
-                      <button onClick={() => handleSendNotification(interview.id)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors">
-                        <Send className="h-3.5 w-3.5" /> 发送通知
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {interview.status === 'pending' && (
+                        <button onClick={() => handleSendNotification(interview.id)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors">
+                          <Send className="h-3.5 w-3.5" /> 发送通知
+                        </button>
+                      )}
+                      {interview.status === 'completed' && (
+                        <button onClick={() => handleMarkAsHired(interview)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors">
+                          <BadgeCheck className="h-3.5 w-3.5" /> 标记录用
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -51,6 +51,7 @@ const companyNav: NavItem[] = [
 const schoolNav: NavItem[] = [
   { label: '岗位大厅', path: '/', icon: <Briefcase className="w-5 h-5" /> },
   { label: '资质审核', path: '/school/reviews', icon: <Shield className="w-5 h-5" /> },
+  { label: '岗位审核', path: '/school/position-reviews', icon: <Briefcase className="w-5 h-5" /> },
   { label: '数据看板', path: '/school/dashboard', icon: <BarChart3 className="w-5 h-5" /> },
   { label: '协议签署', path: '/school/agreements', icon: <FileCheck className="w-5 h-5" /> },
 ]

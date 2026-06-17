@@ -16,6 +16,7 @@ import InternshipLogs from '@/pages/student/InternshipLogs'
 import StudentAgreements from '@/pages/student/Agreements'
 import StudentCertificates from '@/pages/student/Certificates'
 import Reviews from '@/pages/school/Reviews'
+import PositionReviews from '@/pages/school/PositionReviews'
 import Dashboard from '@/pages/school/Dashboard'
 import SchoolAgreements from '@/pages/school/Agreements'
 
@@ -48,6 +49,7 @@ export default function App() {
                 <Route path="/student/agreements" element={<PrivateRoute><StudentAgreements /></PrivateRoute>} />
                 <Route path="/student/certificates" element={<PrivateRoute><StudentCertificates /></PrivateRoute>} />
                 <Route path="/school/reviews" element={<PrivateRoute><Reviews /></PrivateRoute>} />
+                <Route path="/school/position-reviews" element={<PrivateRoute><PositionReviews /></PrivateRoute>} />
                 <Route path="/school/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
                 <Route path="/school/agreements" element={<PrivateRoute><SchoolAgreements /></PrivateRoute>} />
               </Routes>

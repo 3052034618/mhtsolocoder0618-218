@@ -90,7 +90,7 @@ export default function PositionDetail() {
               getLogoColor(position.companyName)
             )}
           >
-            {position.companyLogo}
+            {position.companyLogo || position.companyName[0]}
           </div>
           <div>
             <h1
@@ -187,7 +187,7 @@ export default function PositionDetail() {
                     getLogoColor(position.companyName)
                   )}
                 >
-                  {position.companyLogo}
+                  {position.companyLogo || position.companyName[0]}
                 </div>
                 <h3 className="mt-3 font-semibold text-slate-900">{position.companyName}</h3>
               </div>

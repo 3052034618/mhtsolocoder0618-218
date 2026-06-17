@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { FileText, Calendar, MapPin } from 'lucide-react'
+import { useNavigate, Link } from 'react-router-dom'
+import { FileText, Calendar, MapPin, BadgeCheck, X, ArrowRight } from 'lucide-react'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useApplicationStore } from '@/stores/useApplicationStore'
 import { useInterviewStore } from '@/stores/useInterviewStore'
+import { useAgreementStore } from '@/stores/useAgreementStore'
 import StatusBadge from '@/components/StatusBadge'
 import Empty from '@/components/Empty'
 import { APPLICATION_STATUSES } from '@/types'
-import type { ApplicationStatus } from '@/types'
+import type { ApplicationStatus, Application } from '@/types'
 import { cn } from '@/lib/utils'
 
 const statusTabs: { key: ApplicationStatus | 'all'; label: string }[] = [
@@ -15,6 +16,7 @@ const statusTabs: { key: ApplicationStatus | 'all'; label: string }[] = [
   { key: 'pending', label: '待筛选' },
   { key: 'interview', label: '面试中' },
   { key: 'offered', label: '已录用' },
+  { key: 'accepted', label: '已接受' },
   { key: 'rejected', label: '已拒绝' },
 ]
 
@@ -23,6 +25,41 @@ export default function Applications() {
   const user = useAuthStore((s) => s.user)
   const getApplicationsByStudent = useApplicationStore((s) => s.getApplicationsByStudent)
   const getInterviewsByStudent = useInterviewStore((s) => s.getInterviewsByStudent)
+  const updateApplicationStatus = useApplicationStore((s) => s.updateApplicationStatus)
+  const agreements = useAgreementStore((s) => s.agreements)
+  const addAgreement = useAgreementStore((s) => s.addAgreement)
+
+  const createAgreementIfNeeded = (app: Application) => {
+    const exists = agreements.some((a) => a.applicationId === app.id)
+    if (exists) return
+    const today = new Date()
+    const start = new Date(today); start.setDate(today.getDate() + 7)
+    const end = new Date(start); end.setMonth(start.getMonth() + 6)
+    const startDate = start.toISOString().split('T')[0]
+    const endDate = end.toISOString().split('T')[0]
+    addAgreement({
+      applicationId: app.id,
+      positionId: app.positionId,
+      positionTitle: app.positionTitle,
+      studentId: app.studentId,
+      studentName: app.studentName,
+      companyId: 'company-1',
+      companyName: app.companyName,
+      schoolId: 'school-1',
+      schoolName: '华东理工大学',
+      startDate,
+      endDate,
+      studentSigned: false,
+      companySigned: false,
+      schoolSigned: false,
+      status: 'pending_student',
+    })
+  }
+
+  const handleAcceptOffer = (app: Application) => {
+    updateApplicationStatus(app.id, 'accepted')
+    createAgreementIfNeeded(app)
+  }
 
   const [activeTab, setActiveTab] = useState<ApplicationStatus | 'all'>('all')
 
@@ -97,6 +134,35 @@ export default function Applications() {
                       {interview.location}
                     </p>
                     {interview.note && <p>备注：{interview.note}</p>}
+                  </div>
+                )}
+
+                {app.status === 'offered' && (
+                  <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => handleAcceptOffer(app)}
+                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
+                    >
+                      <BadgeCheck className="h-3.5 w-3.5" /> 接受录用
+                    </button>
+                    <button
+                      onClick={() => updateApplicationStatus(app.id, 'rejected')}
+                      className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" /> 拒绝录用
+                    </button>
+                  </div>
+                )}
+
+                {app.status === 'accepted' && (
+                  <div className="mt-4 space-y-2" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-sm text-emerald-600 font-medium">入职成功，请查看我的协议</p>
+                    <Link
+                      to="/student/agreements"
+                      className="inline-flex items-center gap-1 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 transition-colors"
+                    >
+                      查看三方协议 <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
                 )}
               </div>
